@@ -287,7 +287,7 @@ class IdentificationPanel(base.MyPanel):
 
 
     def read_voice(self):
-        speech_key, service_region = "cc3653149fec41f0a7a999f1060a06d0", "westus"
+        speech_key, service_region = "<your key>", "westus"
         speech_config = speechsdk.SpeechConfig(subscription=speech_key, region=service_region)
         speech_recognizer = speechsdk.SpeechRecognizer(speech_config=speech_config)
         print("Say something...")

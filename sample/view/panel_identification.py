@@ -7,13 +7,23 @@ Description: Identification Panel for Python SDK sample.
 
 import os
 import uuid
-
+import requests
+import pyaudio
+import wave
 import wx
 import wx.lib.scrolledpanel as scrolled
+import azure.cognitiveservices.speech as speechsdk
+import datetime
 
 import util
 import model
 from view import base
+
+import os
+import cv2
+# dir_path = os.path.dirname(os.path.realpath(__file__))
+img_counter = 0
+
 
 
 class IdentificationPanel(base.MyPanel):
@@ -74,7 +84,8 @@ class IdentificationPanel(base.MyPanel):
         self.rsizer.SetMinSize((util.MAX_IMAGE_SIZE, -1))
 
         flag = wx.EXPAND | wx.ALIGN_CENTER | wx.ALL
-        self.btn_file = wx.Button(self.panel, label='Choose Image')
+        self.btn_file = wx.Button(self.panel, label='Capture Image')
+        #btn_file = "Test.png"
         self.rsizer.Add(self.btn_file, 0, flag, 5)
         self.Bind(wx.EVT_BUTTON, self.OnChooseImage, self.btn_file)
 
@@ -189,16 +200,18 @@ class IdentificationPanel(base.MyPanel):
 
     def OnChooseImage(self, evt):
         """Choose Image."""
+        start = datetime.datetime.now()
         util.CF.util.wait_for_large_person_group_training(
             self.large_person_group_id)
         self.log.log(
             'Response: Success. Group "{0}" training process is Succeeded'.
             format(self.large_person_group_id))
 
-        dlg = wx.FileDialog(self, wildcard=util.IMAGE_WILDCARD)
-        if dlg.ShowModal() != wx.ID_OK:
-            return
-        path = dlg.GetPath()
+        # dlg = wx.FileDialog(self, wildcard=util.IMAGE_WILDCARD)
+        # if dlg.ShowModal() != wx.ID_OK:
+        #     return
+        # path = dir_path + "/Test.JPG"
+        path = self.snap_photo()
         self.bitmap.set_path(path)
 
         self.log.log('Detecting faces in {}'.format(path))
@@ -221,11 +234,88 @@ class IdentificationPanel(base.MyPanel):
             if entry['candidates']:
                 person_id = entry['candidates'][0]['personId']
                 self.faces[face_id].set_name(self.person_id_names[person_id])
+                end = datetime.datetime.now()
+                print(end - start)
             else:
                 self.faces[face_id].set_name('Unknown')
+            nam = self.faces[face_id].name
+            # print(nam)
+            if("Sulav" == nam):
+                print ("Sulav")
+                self.play_audio("./ask_passphrase.wav")
+                passphrase = self.read_voice()
+                if(passphrase.lower() == "lock the car."):
+                    r = requests.get('http://localhost:8000/unlock')
+                    response = r.json()
+                    self.play_audio("./unlocked.wav")
+                    print(response)
+                    break;
+                elif(passphrase.lower() == "lock."):
+                    r = requests.get('http://localhost:8000/lock')
+                    response = r.json()
+                    self.play_audio("./locked.wav")
+                    print(response)
+                else:
+                    self.play_audio("./can't_recognize.wav")
+                    print("passphrase wrong")
+            else:
+                self.play_audio("./can't_recognize.wav")
+
         util.draw_bitmap_rectangle(self.bitmap, self.faces.values())
         log_text = 'Response: Success.'
         for face_id in self.faces:
             log_text += ' Face {0} is identified as {1}.'.format(
                 face_id, self.faces[face_id].name)
         self.log.log(log_text)
+
+
+    def snap_photo(self):
+        global img_counter
+        cam = cv2.VideoCapture(0)
+        # name = ""
+        # dir_path = os.path.dirname(os.path.realpath(__file__))
+        # if not os.path.exists(name):
+        #     os.makedirs(name)
+        # dir_path_new = os.chdir(dir_path + "\\" + name)
+        ret, frame = cam.read()
+
+        img_name = "opencv_frame_{}.png".format(img_counter)
+        cv2.imwrite(img_name, frame)
+        print("{} written!".format(img_name))
+        img_counter += 1
+        return "C:\\Smart\\Cognitive-Face-Python\\"+ img_name
+
+
+    def read_voice(self):
+        speech_key, service_region = "cc3653149fec41f0a7a999f1060a06d0", "westus"
+        speech_config = speechsdk.SpeechConfig(subscription=speech_key, region=service_region)
+        speech_recognizer = speechsdk.SpeechRecognizer(speech_config=speech_config)
+        print("Say something...")
+        result = speech_recognizer.recognize_once()
+        if result.reason == speechsdk.ResultReason.RecognizedSpeech:
+            print("Recognized: {}".format(result.text))
+        elif result.reason == speechsdk.ResultReason.NoMatch:
+            print("No speech could be recognized: {}".format(result.no_match_details))
+        elif result.reason == speechsdk.ResultReason.Canceled:
+            cancellation_details = result.cancellation_details
+            print("Speech Recognition canceled: {}".format(cancellation_details.reason))
+            if cancellation_details.reason == speechsdk.CancellationReason.Error:
+                print("Error details: {}".format(cancellation_details.error_details))
+        print("Result text "+result.text)
+        return result.text
+
+    def play_audio(self, file):
+        chunk = 1024
+        f = wave.open(file, "rb")
+        p = pyaudio.PyAudio()
+        stream = p.open(format=p.get_format_from_width(f.getsampwidth()),
+                        channels=f.getnchannels(),
+                        rate=f.getframerate(),
+                        output=True)
+        data = f.readframes(chunk)
+        while data:
+            stream.write(data)
+            data = f.readframes(chunk)
+        stream.stop_stream()
+        stream.close()
+        p.terminate()

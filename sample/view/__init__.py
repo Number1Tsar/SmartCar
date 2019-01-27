@@ -19,7 +19,7 @@ from view.panel_group import GroupPanel
 from view.panel_identification import IdentificationPanel
 from view.panel_verification import VerificationPanel
 
-TITLE = u"Microsoft Cognitive Services Face Samples"
+TITLE = u"Dual Authentication Smart Car Unlock System"
 
 
 class MyLabelBook(LB.LabelBook):
@@ -33,14 +33,14 @@ class MyLabelBook(LB.LabelBook):
         subscription_text = u"Subscription Key Management"
         self.AddPage(subscription_panel, subscription_text, True)
 
-        self.AddPage(wx.Panel(self), u"Select a scenario:")
+        #self.AddPage(wx.Panel(self), u"Select a scenario:")
         self.EnableTab(1, False)
 
-        self.AddPage(DetectionPanel(self), u" - Face Detection")
-        self.AddPage(FindSimilarPanel(self), u" - Face Find Similar")
-        self.AddPage(GroupPanel(self), u" - Face Grouping")
+        #self.AddPage(DetectionPanel(self), u" - Face Detection")
+        #self.AddPage(FindSimilarPanel(self), u" - Face Find Similar")
+        #self.AddPage(GroupPanel(self), u" - Face Grouping")
         self.AddPage(IdentificationPanel(self), u" - Face Identification")
-        self.AddPage(VerificationPanel(self), u" - Face Verification")
+        #self.AddPage(VerificationPanel(self), u" - Face Verification")
 
 
 class MyTitle(wx.Panel):
@@ -48,7 +48,7 @@ class MyTitle(wx.Panel):
 
     def __init__(self, parent):
         super(MyTitle, self).__init__(parent)
-        self.SetBackgroundColour('#00b294')
+        self.SetBackgroundColour('#6495ED')
         self.SetMinSize((-1, 80))
 
         sizer = wx.BoxSizer()
